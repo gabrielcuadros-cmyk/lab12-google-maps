@@ -1,15 +1,30 @@
+# Android Studio / Gradle
 *.iml
 .gradle
-/local.properties
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx
+.kotlin
+.DS_Store
+
+# Configuración local del IDE
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+/.idea/deploymentTargetDropDown.xml
+/.idea/deploymentTargetSelector.xml
+
+# Rutas locales del SDK (nunca subir)
 local.properties
+
+# Secretos: API Key de Google Maps (nunca subir)
+secrets.properties
+
+# Llaves de firma
+*.jks
+*.keystore
