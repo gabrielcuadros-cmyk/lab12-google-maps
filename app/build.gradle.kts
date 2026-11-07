@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.secrets.gradle.plugin)
 }
 
 android {
@@ -32,7 +33,16 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
+}
+
+secrets {
+    // Archivo con la API Key real (NO se sube a Git, está en .gitignore)
+    propertiesFileName = "secrets.properties"
+
+    // Valores por defecto para que el proyecto compile sin la clave real
+    defaultPropertiesFileName = "local.defaults.properties"
 }
 
 dependencies {
