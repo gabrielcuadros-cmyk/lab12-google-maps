@@ -28,3 +28,7 @@ secrets.properties
 # Llaves de firma
 *.jks
 *.keystore
+
+# Videos de demostración (se suben a Google Drive, no a GitHub)
+*.mp4
+*.webm
