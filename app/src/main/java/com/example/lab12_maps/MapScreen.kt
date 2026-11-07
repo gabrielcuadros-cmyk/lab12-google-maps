@@ -1,6 +1,12 @@
 package com.example.lab12_maps
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -8,9 +14,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Text
@@ -19,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +37,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -38,14 +49,17 @@ import com.google.android.gms.maps.model.Gap
 import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.RoundCap
+import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
+import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.Polygon
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.compose.rememberMarkerState
+import kotlinx.coroutines.launch
 
 @Composable
 fun MapScreen() {
@@ -67,13 +81,78 @@ fun MapScreen() {
     // Ejercicio 1: tipo de mapa seleccionado (Normal, Híbrido, Satélite o Terreno)
     var mapType by remember { mutableStateOf(MapType.NORMAL) }
 
+    // Ejercicio 2: ubicación actual del usuario
+    val scope = rememberCoroutineScope()
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+    var hasLocationPermission by remember { mutableStateOf(context.hasLocationPermission()) }
+    var userLocation by remember { mutableStateOf<LatLng?>(null) }
+
+    // Pide la ubicación actual al FusedLocationProviderClient y mueve la cámara hacia ella
+    @SuppressLint("MissingPermission")
+    fun getCurrentLocation() {
+        // Mueve la cámara y coloca el marcador en la ubicación obtenida
+        fun showLocation(latitude: Double, longitude: Double) {
+            val position = LatLng(latitude, longitude)
+            userLocation = position
+            scope.launch {
+                cameraPositionState.animate(
+                    update = CameraUpdateFactory.newLatLngZoom(position, 16f),
+                    durationMs = 2000
+                )
+            }
+        }
+
+        Toast.makeText(context, "Obteniendo ubicación...", Toast.LENGTH_SHORT).show()
+        fusedLocationClient
+            .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, CancellationTokenSource().token)
+            .addOnSuccessListener { location ->
+                if (location != null) {
+                    showLocation(location.latitude, location.longitude)
+                } else {
+                    // Si aún no hay una lectura nueva del GPS, se usa la última ubicación conocida
+                    fusedLocationClient.lastLocation.addOnSuccessListener { last ->
+                        if (last != null) {
+                            showLocation(last.latitude, last.longitude)
+                        } else {
+                            Toast.makeText(context, "No se pudo obtener la ubicación. Activa el GPS.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+    }
+
+    // Lanzador que muestra el diálogo de permisos de ubicación
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        hasLocationPermission = permissions.values.any { it }
+        if (hasLocationPermission) {
+            getCurrentLocation()
+        } else {
+            Toast.makeText(context, "Permiso de ubicación denegado", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         // Añadir GoogleMap al layout
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
-            properties = MapProperties(mapType = mapType)
+            properties = MapProperties(
+                mapType = mapType,
+                isMyLocationEnabled = hasLocationPermission // Punto azul de "Mi ubicación"
+            )
         ) {
+            // Ejercicio 2: marcador en la ubicación actual del usuario
+            userLocation?.let { position ->
+                Marker(
+                    state = MarkerState(position = position),
+                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN),
+                    title = "Mi ubicación",
+                    snippet = "%.5f, %.5f".format(position.latitude, position.longitude)
+                )
+            }
+
             // Añadir marcador en Arequipa, Perú
             Marker(
                 state = rememberMarkerState(position = ArequipaLocation),
@@ -195,8 +274,37 @@ fun MapScreen() {
                 .statusBarsPadding()
                 .padding(top = 8.dp)
         )
+
+        // Ejercicio 2: botón para obtener la ubicación actual
+        ExtendedFloatingActionButton(
+            onClick = {
+                if (hasLocationPermission) {
+                    getCurrentLocation()
+                } else {
+                    locationPermissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .navigationBarsPadding()
+                .padding(16.dp)
+        ) {
+            Text("📍 Mi ubicación")
+        }
     }
 }
+
+/**
+ * Verifica si la app ya tiene permiso de ubicación (precisa o aproximada).
+ */
+fun Context.hasLocationPermission(): Boolean =
+    ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+        ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
 /**
  * Fila de chips para cambiar el tipo de mapa.
