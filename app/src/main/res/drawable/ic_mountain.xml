@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icono personalizado de montaña para el marcador del volcán Misti -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- Fondo circular -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#4E342E"
+        android:strokeWidth="2"
+        android:pathData="M24,3a21,21 0,1 1,0 42a21,21 0,1 1,0 -42z" />
+
+    <!-- Sol -->
+    <path
+        android:fillColor="#FFB300"
+        android:pathData="M36,13m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
+
+    <!-- Montañas -->
+    <path
+        android:fillColor="#6D4C41"
+        android:pathData="M7,35 L18,16 L25,28 L30,21 L41,35 Z" />
+
+    <!-- Nieve en las cumbres -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M18,16 L14.5,22 L16.3,21 L18,23 L19.8,21 L21.5,22 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M30,21 L27.9,24 L29.3,23.5 L30.6,25 L32.4,23.6 Z" />
+</vector>
