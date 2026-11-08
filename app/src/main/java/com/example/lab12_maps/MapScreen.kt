@@ -11,6 +11,7 @@ import androidx.annotation.DrawableRes
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -50,6 +51,7 @@ import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.RoundCap
 import com.google.android.gms.tasks.CancellationTokenSource
+import com.google.android.libraries.places.api.Places
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
@@ -86,6 +88,10 @@ fun MapScreen() {
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     var hasLocationPermission by remember { mutableStateOf(context.hasLocationPermission()) }
     var userLocation by remember { mutableStateOf<LatLng?>(null) }
+
+    // Puntos adicionales: cliente de Places y lugar buscado
+    val placesClient = remember { Places.createClient(context) }
+    var searchedPlace by remember { mutableStateOf<SelectedPlace?>(null) }
 
     // Pide la ubicación actual al FusedLocationProviderClient y mueve la cámara hacia ella
     @SuppressLint("MissingPermission")
@@ -143,6 +149,18 @@ fun MapScreen() {
                 isMyLocationEnabled = hasLocationPermission // Punto azul de "Mi ubicación"
             )
         ) {
+            // Puntos adicionales: marcador del lugar buscado con Places API
+            searchedPlace?.let { place ->
+                val placeMarkerState = remember(place) { MarkerState(position = place.latLng) }
+                Marker(
+                    state = placeMarkerState,
+                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_VIOLET),
+                    title = place.name,
+                    snippet = place.address
+                )
+                LaunchedEffect(place) { placeMarkerState.showInfoWindow() }
+            }
+
             // Ejercicio 2: marcador en la ubicación actual del usuario
             userLocation?.let { position ->
                 Marker(
@@ -265,15 +283,33 @@ fun MapScreen() {
             )
         }
 
-        // Ejercicio 1: selector del tipo de mapa sobre el mapa
-        MapTypeSelector(
-            selected = mapType,
-            onSelected = { mapType = it },
+        Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .statusBarsPadding()
                 .padding(top = 8.dp)
-        )
+        ) {
+            // Ejercicio 1: selector del tipo de mapa sobre el mapa
+            MapTypeSelector(
+                selected = mapType,
+                onSelected = { mapType = it }
+            )
+
+            // Puntos adicionales: buscador de lugares (Places API)
+            PlaceSearchBar(
+                placesClient = placesClient,
+                onPlaceSelected = { place ->
+                    searchedPlace = place
+                    scope.launch {
+                        cameraPositionState.animate(
+                            update = CameraUpdateFactory.newLatLngZoom(place.latLng, 16f),
+                            durationMs = 2000
+                        )
+                    }
+                },
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
 
         // Ejercicio 2: botón para obtener la ubicación actual
         ExtendedFloatingActionButton(

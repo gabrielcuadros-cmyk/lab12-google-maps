@@ -60,6 +60,12 @@ dependencies {
     // Ubicación del usuario (FusedLocationProviderClient)
     implementation(libs.play.services.location)
 
+    // Puntos adicionales: Places SDK for Android (buscador de lugares)
+    implementation(libs.places)
+    // Places trae vectordrawable-animated 1.0.0, que repite el namespace "androidx.vectordrawable"
+    // y AGP 9 no lo permite. Se fuerza una versión más nueva con su propio namespace.
+    implementation("androidx.vectordrawable:vectordrawable-animated:1.2.0")
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
